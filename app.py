@@ -205,83 +205,51 @@ def load_base_data():
 
 base_df = load_base_data()
 
-# ─── Sidebar: Scenario Controls ─────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### 🎛️ Scenario Controls")
-    st.markdown("Adjust assumptions to simulate outcomes. Charts update in real time.")
-    st.markdown("---")
+# Header
+st.markdown("## Startup Runway & Growth Simulator")
+st.markdown('<p style="color:#6b7280; font-size:14px; margin-top:-8px;">Financial health dashboard · 24-month early-stage B2B SaaS model</p>', unsafe_allow_html=True)
 
-    st.markdown("**Revenue**")
+# Scenario Controls (inline - no sidebar)
+st.markdown('<div class="section-header">Scenario Controls</div>', unsafe_allow_html=True)
+
+ctrl1, ctrl2 = st.columns(2)
+with ctrl1:
     rev_change = st.slider(
-        "Monthly Revenue Change",
+        "Revenue Change (%)",
         min_value=-50, max_value=100, value=0, step=5,
         help="Applies a flat % shift to all monthly revenue figures",
         format="%d%%",
     )
-
-    st.markdown("**Burn Rate**")
+with ctrl2:
     burn_change = st.slider(
-        "Monthly Burn Change",
+        "Burn Rate Change (%)",
         min_value=-40, max_value=80, value=0, step=5,
         help="Applies a flat % shift to all monthly burn figures (e.g. hiring, cost cuts)",
         format="%d%%",
     )
 
-    st.markdown("---")
-
-    # Quick scenario presets
-    st.markdown("**⚡ Quick Scenarios**")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🚀 Strong Growth", use_container_width=True):
-            rev_change = 30
-            burn_change = 15
-    with col2:
-        if st.button("🔥 Efficient Mode", use_container_width=True):
-            rev_change = 0
-            burn_change = -20
-
-    col3, col4 = st.columns(2)
-    with col3:
-        if st.button("📉 Slowdown", use_container_width=True):
-            rev_change = -25
-            burn_change = 0
-    with col4:
-        if st.button("⚠️ Crisis", use_container_width=True):
-            rev_change = -40
-            burn_change = 20
-
-    st.markdown("---")
-    st.markdown("""
-    <div style='font-size:11px; color:#6b7280; line-height:1.6'>
-    <b style='color:#9ca3af'>About</b><br>
-    Simulated 24-month early-stage B2B SaaS startup. Series A injection at Month 12.<br><br>
-    Built by a University of Michigan Economics grad exploring startup analytics.
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown('<p style="font-size:12px; color:#6b7280; margin-bottom:4px;">Quick Scenarios:</p>', unsafe_allow_html=True)
+qc1, qc2, qc3, qc4, _ = st.columns([1, 1, 1, 1, 2])
+with qc1:
+    if st.button("Strong Growth", use_container_width=True):
+        rev_change = 30
+        burn_change = 15
+with qc2:
+    if st.button("Efficient Mode", use_container_width=True):
+        rev_change = 0
+        burn_change = -20
+with qc3:
+    if st.button("Revenue Slowdown", use_container_width=True):
+        rev_change = -25
+        burn_change = 0
+with qc4:
+    if st.button("Crisis Mode", use_container_width=True):
+        rev_change = -40
+        burn_change = 20
 
 # ─── Apply Scenario ──────────────────────────────────────────────────────────────
 scenario_df = apply_scenario(base_df, rev_change / 100, burn_change / 100)
 is_scenario = rev_change != 0 or burn_change != 0
-
-# Latest month stats
-latest_base = base_df.iloc[-1]
-latest = scenario_df.iloc[-1]
-
-# ─── Header ─────────────────────────────────────────────────────────────────────
-col_title, col_badge = st.columns([4, 1])
-with col_title:
-    st.markdown("## Startup Runway & Growth Simulator")
-    st.markdown('<p style="color:#6b7280; font-size:14px; margin-top:-8px;">Financial health dashboard · 24-month early-stage B2B SaaS model</p>', unsafe_allow_html=True)
-with col_badge:
-    if is_scenario:
-        rev_label = fmt_pct(rev_change)
-        burn_label = fmt_pct(burn_change)
-        st.markdown(f"""
-        <div style="text-align:right; padding-top:12px;">
-            <span class="scenario-badge">📊 Scenario: Rev {rev_label} / Burn {burn_label}</span>
-        </div>
-        """, unsafe_allow_html=True)
 
 # ─── KPI Row ─────────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Current Metrics (Month 24)</div>', unsafe_allow_html=True)

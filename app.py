@@ -20,6 +20,7 @@ st.set_page_config(
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={}
 )
 
 # ─── Custom CSS ─────────────────────────────────────────────────────────────────
@@ -104,6 +105,10 @@ st.markdown("""
 
     /* Hide Streamlit chrome */
     #MainMenu, footer, header { visibility: hidden; }
+
+    /* Hide the sidebar collapse button so it can't be closed */
+    [data-testid="collapsedControl"] { display: none; }
+    button[kind="header"] { display: none; }
     .block-container { padding-top: 1.5rem; }
 
     /* Divider */

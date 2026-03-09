@@ -51,3 +51,4 @@ startup_simulator/
 ## Conversation starter pitch
 
 > "I built a small tool that simulates startup financial health — you can drag sliders to see what happens to runway if revenue slows 25% or if a hiring spree increases burn. Happy to walk you through it if you have 5 minutes."
+# streamlit-code

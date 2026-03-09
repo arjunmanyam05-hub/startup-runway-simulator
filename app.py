@@ -64,23 +64,73 @@ st.markdown("""
         border-radius: 12px; padding: 20px 24px 20px 24px; margin-bottom: 8px;
     }
 
-    /* Color each scenario button by wrapping div ID */
-    #btn-green button  { background:#052e16 !important; border:1.5px solid #16a34a !important; color:#4ade80 !important; }
-    #btn-green button:hover { background:#0a4a24 !important; }
-    #btn-blue button   { background:#0c1a2e !important; border:1.5px solid #1d4ed8 !important; color:#60a5fa !important; }
-    #btn-blue button:hover  { background:#1a3050 !important; }
-    #btn-amber button  { background:#1c1407 !important; border:1.5px solid #b45309 !important; color:#fbbf24 !important; }
-    #btn-amber button:hover { background:#2e1f08 !important; }
-    #btn-red button    { background:#1c0a0a !important; border:1.5px solid #b91c1c !important; color:#f87171 !important; }
-    #btn-red button:hover   { background:#2e1010 !important; }
-    #btn-gray button   { background:#161b27 !important; border:1.5px solid #374151 !important; color:#9ca3af !important; }
-    #btn-gray button:hover  { background:#1f2937 !important; color:#e8eaf0 !important; }
-
+    /* Base button style for ALL buttons */
     div[data-testid="stButton"] button {
-        font-family:'DM Sans',sans-serif !important;
-        font-weight:600 !important; font-size:13px !important;
-        border-radius:8px !important; width:100% !important;
-        transition: filter 0.15s ease !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        padding: 8px 12px !important;
+        transition: all 0.15s ease !important;
+        cursor: pointer !important;
+    }
+
+    /* Strong Growth — green */
+    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button,
+    div[data-testid="stButton"]:nth-of-type(1) button {
+        background: #052e16 !important;
+        border: 1.5px solid #16a34a !important;
+        color: #4ade80 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button:hover {
+        background: #064e24 !important;
+        box-shadow: 0 0 10px rgba(74,222,128,0.25) !important;
+    }
+
+    /* Efficient Mode — blue */
+    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button {
+        background: #0c1a2e !important;
+        border: 1.5px solid #2563eb !important;
+        color: #60a5fa !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button:hover {
+        background: #162d4e !important;
+        box-shadow: 0 0 10px rgba(96,165,250,0.25) !important;
+    }
+
+    /* Slowdown — amber */
+    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button {
+        background: #1c1407 !important;
+        border: 1.5px solid #d97706 !important;
+        color: #fbbf24 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button:hover {
+        background: #2e200a !important;
+        box-shadow: 0 0 10px rgba(251,191,36,0.25) !important;
+    }
+
+    /* Crisis — red */
+    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button {
+        background: #1c0a0a !important;
+        border: 1.5px solid #dc2626 !important;
+        color: #f87171 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button:hover {
+        background: #2e1010 !important;
+        box-shadow: 0 0 10px rgba(248,113,113,0.25) !important;
+    }
+
+    /* Reset — neutral gray */
+    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button {
+        background: #161b27 !important;
+        border: 1.5px solid #4b5563 !important;
+        color: #d1d5db !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button:hover {
+        background: #1f2937 !important;
+        border-color: #9ca3af !important;
+        color: #f9fafb !important;
     }
 
     .active-badge {
@@ -218,33 +268,18 @@ with slider_col2:
 st.markdown('<p style="font-size:12px;color:#6b7280;margin:14px 0 10px 0;">⚡ Quick Scenarios</p>',
             unsafe_allow_html=True)
 
-# Each button is wrapped in a div with a unique ID so CSS can target it reliably
 bcol1, bcol2, bcol3, bcol4, bcol5, _ = st.columns([1.1, 1.1, 1, 1, 0.85, 2])
 
 with bcol1:
-    st.markdown('<div id="btn-green">', unsafe_allow_html=True)
     clicked_strong = st.button("🚀 Strong Growth", key="btn_strong", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 with bcol2:
-    st.markdown('<div id="btn-blue">', unsafe_allow_html=True)
     clicked_efficient = st.button("✂️ Efficient Mode", key="btn_efficient", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 with bcol3:
-    st.markdown('<div id="btn-amber">', unsafe_allow_html=True)
     clicked_slowdown = st.button("📉 Slowdown", key="btn_slowdown", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 with bcol4:
-    st.markdown('<div id="btn-red">', unsafe_allow_html=True)
     clicked_crisis = st.button("⚠️ Crisis", key="btn_crisis", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 with bcol5:
-    st.markdown('<div id="btn-gray">', unsafe_allow_html=True)
     clicked_reset = st.button("↺ Reset", key="btn_reset", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)  # close scenario-panel
 
@@ -308,6 +343,36 @@ with k4:
     kpi_card("Cash on Hand", fmt_currency(latest["cash_on_hand"]))
 with k5:
     kpi_card("Runway", f"{runway_val:.1f} mo")
+
+# ─── Scenario Delta Row (only shown when a scenario is active) ──────────────────
+if is_scenario:
+    base_latest = base_df.iloc[-1]
+    rev_delta = latest["revenue"] - base_latest["revenue"]
+    burn_delta = latest["burn"] - base_latest["burn"]
+    cash_delta = latest["cash_on_hand"] - base_latest["cash_on_hand"]
+    runway_delta = runway_val - max(base_latest["runway_months"], 0)
+
+    def delta_arrow(val, good="positive"):
+        if val == 0: return "─"
+        up = val > 0
+        arrow = "▲" if up else "▼"
+        color = "#34d399" if (up and good == "positive") or (not up and good == "negative") else "#f87171"
+        return f'<span style="color:{color};font-size:11px;font-weight:600">{arrow} {fmt_currency(abs(val)) if abs(val) >= 100 else f"{abs(val):.1f}"}</span>'
+
+    st.markdown(f"""
+    <div style="display:flex;gap:12px;margin:8px 0 4px 0;padding:12px 16px;
+                background:#0d1117;border:1px solid #1e2535;border-radius:10px;
+                font-size:12px;color:#6b7280;align-items:center;">
+        <span style="font-weight:600;color:#9ca3af;margin-right:4px;">vs. Baseline →</span>
+        <span>Revenue: {delta_arrow(rev_delta, "positive")}</span>
+        <span style="color:#374151">|</span>
+        <span>Burn: {delta_arrow(burn_delta, "negative")}</span>
+        <span style="color:#374151">|</span>
+        <span>Cash: {delta_arrow(cash_delta, "positive")}</span>
+        <span style="color:#374151">|</span>
+        <span>Runway: {delta_arrow(runway_delta, "positive")} mo</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─── Charts ─────────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Trends Over 24 Months</div>', unsafe_allow_html=True)
@@ -385,6 +450,16 @@ with c4:
     fig.add_trace(go.Bar(x=month_labels, y=scenario_df["burn"], name="Burn",
         marker_color=COLORS["burn"], opacity=0.85,
         hovertemplate="Burn: $%{y:,.0f}<extra></extra>"))
+    # Annotate the first month revenue exceeds burn (default profitability)
+    crossover = scenario_df[scenario_df["revenue"] >= scenario_df["burn"]]
+    if not crossover.empty:
+        cx = int(crossover.iloc[0]["month"]) - 1
+        fig.add_shape(type="line", x0=cx, x1=cx, y0=0, y1=1,
+                      xref="x", yref="paper",
+                      line=dict(color="#a78bfa", width=1.5, dash="dot"))
+        fig.add_annotation(x=cx, y=1, xref="x", yref="paper",
+                           text="Rev > Burn", showarrow=False,
+                           font=dict(color="#a78bfa", size=10), yanchor="bottom")
     fig.update_layout(**PLOTLY_LAYOUT, title="Revenue vs. Burn", height=270,
                       barmode="group", yaxis_tickprefix="$", yaxis_tickformat=",")
     st.plotly_chart(fig, use_container_width=True)

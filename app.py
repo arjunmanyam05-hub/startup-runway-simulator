@@ -18,19 +18,12 @@ st.set_page_config(
 )
 
 # ─── Session State Init ──────────────────────────────────────────────────────────
-# The trick: sliders use key= pointing to session_state directly.
-# When a button fires, we update session_state BEFORE the slider renders,
-# so the slider picks up the new value automatically on rerun.
 if "rev_change" not in st.session_state:
     st.session_state["rev_change"] = 0
 if "burn_change" not in st.session_state:
     st.session_state["burn_change"] = 0
 if "active_scenario" not in st.session_state:
     st.session_state["active_scenario"] = None
-
-# Handle quick scenario button presses BEFORE anything renders
-# so that sliders are initialized with correct values on this run
-query = st.query_params.get("scenario", None)
 
 # ─── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -40,164 +33,122 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
     .stApp { background-color: #0f1117; color: #e8eaf0; }
 
-    /* ── KPI Cards ── */
     .kpi-card {
-        background: #161b27;
-        border: 1px solid #1e2535;
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin: 4px 0;
+        background: #161b27; border: 1px solid #1e2535;
+        border-radius: 12px; padding: 20px 24px; margin: 4px 0;
         transition: border-color 0.2s;
     }
     .kpi-card:hover { border-color: #374151; }
     .kpi-label {
-        font-size: 11px; font-weight: 600;
-        letter-spacing: 0.08em; text-transform: uppercase;
-        color: #6b7280; margin-bottom: 6px;
+        font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #6b7280; margin-bottom: 6px;
     }
     .kpi-value {
-        font-family: 'DM Mono', monospace;
-        font-size: 26px; font-weight: 500;
-        color: #f1f3f7; line-height: 1;
+        font-family: 'DM Mono', monospace; font-size: 26px;
+        font-weight: 500; color: #f1f3f7; line-height: 1;
     }
     .kpi-delta { font-size: 12px; margin-top: 6px; font-weight: 500; }
     .kpi-delta.positive { color: #34d399; }
     .kpi-delta.negative { color: #f87171; }
     .kpi-delta.neutral  { color: #9ca3af; }
 
-    /* ── Section headers ── */
     .section-header {
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 0.06em; text-transform: uppercase;
-        color: #6b7280; margin: 28px 0 12px 0;
-        padding-bottom: 8px; border-bottom: 1px solid #1e2535;
+        font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+        text-transform: uppercase; color: #6b7280;
+        margin: 28px 0 12px 0; padding-bottom: 8px;
+        border-bottom: 1px solid #1e2535;
     }
 
-    /* ── Scenario panel ── */
     .scenario-panel {
-        background: #161b27;
-        border: 1px solid #1e2535;
-        border-radius: 12px;
-        padding: 20px 24px 20px 24px;
-        margin-bottom: 8px;
+        background: #161b27; border: 1px solid #1e2535;
+        border-radius: 12px; padding: 20px 24px 20px 24px; margin-bottom: 8px;
     }
 
-    /* ── Scenario buttons (styled as HTML, not st.button) ── */
-    .scenario-btn {
-        display: inline-block;
-        width: 100%;
-        text-align: center;
-        padding: 9px 8px;
-        border-radius: 8px;
-        border: 1.5px solid;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none !important;
-        transition: filter 0.15s ease;
-        box-sizing: border-box;
+    /* Color each scenario button by wrapping div ID */
+    #btn-green button  { background:#052e16 !important; border:1.5px solid #16a34a !important; color:#4ade80 !important; }
+    #btn-green button:hover { background:#0a4a24 !important; }
+    #btn-blue button   { background:#0c1a2e !important; border:1.5px solid #1d4ed8 !important; color:#60a5fa !important; }
+    #btn-blue button:hover  { background:#1a3050 !important; }
+    #btn-amber button  { background:#1c1407 !important; border:1.5px solid #b45309 !important; color:#fbbf24 !important; }
+    #btn-amber button:hover { background:#2e1f08 !important; }
+    #btn-red button    { background:#1c0a0a !important; border:1.5px solid #b91c1c !important; color:#f87171 !important; }
+    #btn-red button:hover   { background:#2e1010 !important; }
+    #btn-gray button   { background:#161b27 !important; border:1.5px solid #374151 !important; color:#9ca3af !important; }
+    #btn-gray button:hover  { background:#1f2937 !important; color:#e8eaf0 !important; }
+
+    div[data-testid="stButton"] button {
+        font-family:'DM Sans',sans-serif !important;
+        font-weight:600 !important; font-size:13px !important;
+        border-radius:8px !important; width:100% !important;
+        transition: filter 0.15s ease !important;
     }
-    .scenario-btn:hover { filter: brightness(1.2); text-decoration: none !important; }
 
-    .btn-green  { background: #052e16; border-color: #16a34a; color: #4ade80 !important; }
-    .btn-blue   { background: #0c1a2e; border-color: #1d4ed8; color: #60a5fa !important; }
-    .btn-amber  { background: #1c1407; border-color: #b45309; color: #fbbf24 !important; }
-    .btn-red    { background: #1c0a0a; border-color: #b91c1c; color: #f87171 !important; }
-    .btn-gray   { background: #161b27; border-color: #374151; color: #9ca3af !important; }
-    .btn-active { filter: brightness(1.3); box-shadow: 0 0 8px rgba(255,255,255,0.1); }
-
-    /* ── Active scenario badge ── */
     .active-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: #1a2436; border: 1px solid #2d4a6e;
-        border-radius: 20px; padding: 5px 14px;
-        font-size: 12px; color: #60a5fa; font-weight: 600;
+        display:inline-flex; align-items:center; gap:6px;
+        background:#1a2436; border:1px solid #2d4a6e;
+        border-radius:20px; padding:5px 14px;
+        font-size:12px; color:#60a5fa; font-weight:600;
     }
 
-    /* ── Insight box ── */
     .insight-box {
-        border-left: 3px solid #60a5fa;
-        border-radius: 0 8px 8px 0;
-        padding: 12px 16px;
-        margin: 12px 0 4px 0;
-        font-size: 13px;
-        line-height: 1.6;
+        border-left:3px solid #60a5fa; border-radius:0 8px 8px 0;
+        padding:12px 16px; margin:12px 0 4px 0;
+        font-size:13px; line-height:1.6;
     }
-    .insight-box.info    { background: #0d1a2e; border-left-color: #60a5fa; color: #93c5fd; }
-    .insight-box.warning { background: #1c1407; border-left-color: #f59e0b; color: #fcd34d; }
-    .insight-box.danger  { background: #1c0a0a; border-left-color: #ef4444; color: #fca5a5; }
-    .insight-box.success { background: #052e16; border-left-color: #22c55e; color: #86efac; }
+    .insight-box.info    { background:#0d1a2e; border-left-color:#60a5fa; color:#93c5fd; }
+    .insight-box.warning { background:#1c1407; border-left-color:#f59e0b; color:#fcd34d; }
+    .insight-box.danger  { background:#1c0a0a; border-left-color:#ef4444; color:#fca5a5; }
+    .insight-box.success { background:#052e16; border-left-color:#22c55e; color:#86efac; }
 
-    /* ── Hide Streamlit chrome ── */
-    #MainMenu, footer, header { visibility: hidden; }
-    [data-testid="stSidebar"] { display: none; }
-    .block-container { padding-top: 1.5rem; max-width: 1400px; }
-    hr { border-color: #1e2535; margin: 24px 0; }
+    #MainMenu, footer, header { visibility:hidden; }
+    [data-testid="stSidebar"] { display:none; }
+    .block-container { padding-top:1.5rem; max-width:1400px; }
+    hr { border-color:#1e2535; margin:24px 0; }
 </style>
 """, unsafe_allow_html=True)
 
 # ─── Color Palette ──────────────────────────────────────────────────────────────
 COLORS = {
-    "revenue":  "#34d399",
-    "burn":     "#f87171",
-    "cash":     "#60a5fa",
-    "baseline": "#374151",
-    "bg":       "#0f1117",
-    "card_bg":  "#161b27",
-    "grid":     "#1e2535",
-    "text":     "#e8eaf0",
-    "subtext":  "#6b7280",
+    "revenue": "#34d399", "burn": "#f87171", "cash": "#60a5fa",
+    "baseline": "#374151", "bg": "#0f1117", "card_bg": "#161b27",
+    "grid": "#1e2535", "text": "#e8eaf0", "subtext": "#6b7280",
 }
 
 PLOTLY_LAYOUT = dict(
-    paper_bgcolor=COLORS["bg"],
-    plot_bgcolor=COLORS["card_bg"],
+    paper_bgcolor=COLORS["bg"], plot_bgcolor=COLORS["card_bg"],
     font=dict(family="DM Sans", color=COLORS["text"], size=12),
     margin=dict(l=16, r=16, t=40, b=16),
-    xaxis=dict(
-        showgrid=True, gridcolor=COLORS["grid"], gridwidth=1, zeroline=False,
-        tickfont=dict(size=11, color=COLORS["subtext"]),
-        title_font=dict(size=11, color=COLORS["subtext"]),
-    ),
-    yaxis=dict(
-        showgrid=True, gridcolor=COLORS["grid"], gridwidth=1, zeroline=False,
-        tickfont=dict(size=11, color=COLORS["subtext"]),
-        title_font=dict(size=11, color=COLORS["subtext"]),
-    ),
-    legend=dict(
-        bgcolor="rgba(0,0,0,0)", font=dict(size=11, color=COLORS["subtext"]),
-        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-    ),
+    xaxis=dict(showgrid=True, gridcolor=COLORS["grid"], gridwidth=1, zeroline=False,
+               tickfont=dict(size=11, color=COLORS["subtext"]),
+               title_font=dict(size=11, color=COLORS["subtext"])),
+    yaxis=dict(showgrid=True, gridcolor=COLORS["grid"], gridwidth=1, zeroline=False,
+               tickfont=dict(size=11, color=COLORS["subtext"]),
+               title_font=dict(size=11, color=COLORS["subtext"])),
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11, color=COLORS["subtext"]),
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     hoverlabel=dict(bgcolor="#1e2535", font_size=12, font_family="DM Mono", bordercolor="#374151"),
 )
 
-# ─── Helper Functions ────────────────────────────────────────────────────────────
+# ─── Helpers ────────────────────────────────────────────────────────────────────
 def fmt_currency(val: float) -> str:
-    if abs(val) >= 1_000_000:
-        return f"${val / 1_000_000:.1f}M"
-    if abs(val) >= 1_000:
-        return f"${val / 1_000:.0f}K"
+    if abs(val) >= 1_000_000: return f"${val/1_000_000:.1f}M"
+    if abs(val) >= 1_000:     return f"${val/1_000:.0f}K"
     return f"${val:,.0f}"
 
 def fmt_pct(val: float) -> str:
-    sign = "+" if val >= 0 else ""
-    return f"{sign}{val:.1f}%"
+    return f"{'+'if val>=0 else ''}{val:.1f}%"
 
-def delta_class(val: float, good_direction: str = "positive") -> str:
-    if val == 0:
-        return "neutral"
-    is_positive = val > 0
-    return ("positive" if is_positive else "negative") if good_direction == "positive" \
-        else ("negative" if is_positive else "positive")
+def delta_class(val: float, good: str = "positive") -> str:
+    if val == 0: return "neutral"
+    pos = val > 0
+    return ("positive" if pos else "negative") if good == "positive" else ("negative" if pos else "positive")
 
 def kpi_card(label: str, value: str, delta: str = None, delta_good: str = "positive") -> None:
     delta_html = ""
     if delta:
-        numeric_str = re.sub(r"[^0-9.\-]", "", delta.split()[0])
-        numeric_val = float(numeric_str) if numeric_str else 0.0
-        css_class = delta_class(numeric_val, delta_good)
-        delta_html = f'<div class="kpi-delta {css_class}">{delta}</div>'
+        num = re.sub(r"[^0-9.\-]", "", delta.split()[0])
+        css = delta_class(float(num) if num else 0.0, delta_good)
+        delta_html = f'<div class="kpi-delta {css}">{delta}</div>'
     st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-label">{label}</div>
@@ -224,11 +175,11 @@ def runway_insight(runway: float) -> tuple:
     elif runway < 12:
         return ("warning", f"⚠️ {runway:.1f} months of runway. Below the typical 18-month fundraising buffer. Time to start investor conversations or tighten operations.")
     elif runway < 18:
-        return ("warning", f"🟡 {runway:.1f} months of runway. Healthy but worth monitoring. A 10% revenue miss could push this into the danger zone.")
+        return ("warning", f"🟡 {runway:.1f} months of runway. Healthy but worth monitoring. A 10% revenue miss could push this toward the danger zone.")
     else:
         return ("success", f"✅ {runway:.1f} months of runway. Strong position — enough breathing room to focus on growth. Series B conversations can happen from a position of strength.")
 
-# ─── Load Base Data ──────────────────────────────────────────────────────────────
+# ─── Load Data ──────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_base_data():
     return generate_startup_data()
@@ -240,97 +191,105 @@ header_col, badge_col = st.columns([5, 1])
 with header_col:
     st.markdown("## 📈 Startup Runway & Growth Simulator")
     st.markdown(
-        '<p style="color:#6b7280; font-size:14px; margin-top:-8px;">'
+        '<p style="color:#6b7280;font-size:14px;margin-top:-8px;">'
         'Financial health dashboard · 24-month early-stage B2B SaaS model</p>',
-        unsafe_allow_html=True,
-    )
+        unsafe_allow_html=True)
 with badge_col:
     if st.session_state["active_scenario"]:
         st.markdown(
-            f'<div style="padding-top:18px; text-align:right">'
+            f'<div style="padding-top:18px;text-align:right">'
             f'<span class="active-badge">📊 {st.session_state["active_scenario"]}</span></div>',
-            unsafe_allow_html=True,
-        )
+            unsafe_allow_html=True)
 
 # ─── Scenario Controls ───────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Scenario Controls</div>', unsafe_allow_html=True)
 st.markdown('<div class="scenario-panel">', unsafe_allow_html=True)
 
-# Sliders — key= links them directly to session_state so button overrides take effect
 slider_col1, slider_col2 = st.columns(2)
 with slider_col1:
-    st.slider(
-        "📈 Revenue Change (%)",
-        min_value=-50, max_value=100, step=5,
-        format="%d%%",
-        help="Shift all monthly revenue figures up or down by this percentage.",
-        key="rev_change",   # ← reads/writes st.session_state["rev_change"] directly
-    )
+    st.slider("📈 Revenue Change (%)", min_value=-50, max_value=100, step=5,
+              format="%d%%", help="Shift all monthly revenue up or down.",
+              key="rev_change")
 with slider_col2:
-    st.slider(
-        "🔥 Burn Rate Change (%)",
-        min_value=-40, max_value=80, step=5,
-        format="%d%%",
-        help="Shift all monthly burn figures up or down (e.g. hiring surge or cost cuts).",
-        key="burn_change",  # ← reads/writes st.session_state["burn_change"] directly
-    )
+    st.slider("🔥 Burn Rate Change (%)", min_value=-40, max_value=80, step=5,
+              format="%d%%", help="Shift all monthly burn up or down.",
+              key="burn_change")
 
-# Quick scenario buttons — styled with individual HTML so colors are reliable
-st.markdown(
-    '<p style="font-size:12px; color:#6b7280; margin: 14px 0 10px 0;">⚡ Quick Scenarios</p>',
-    unsafe_allow_html=True,
-)
+st.markdown('<p style="font-size:12px;color:#6b7280;margin:14px 0 10px 0;">⚡ Quick Scenarios</p>',
+            unsafe_allow_html=True)
 
-active = st.session_state["active_scenario"]
-bcols = st.columns([1.1, 1.1, 1, 1, 0.85, 2])
+# Each button is wrapped in a div with a unique ID so CSS can target it reliably
+bcol1, bcol2, bcol3, bcol4, bcol5, _ = st.columns([1.1, 1.1, 1, 1, 0.85, 2])
 
-SCENARIOS = [
-    ("strong_growth", "🚀 Strong Growth", "btn-green",  30,   15),
-    ("efficient",     "✂️ Efficient",     "btn-blue",   0,   -20),
-    ("slowdown",      "📉 Slowdown",       "btn-amber", -25,    0),
-    ("crisis",        "⚠️ Crisis",         "btn-red",   -40,   20),
-]
+with bcol1:
+    st.markdown('<div id="btn-green">', unsafe_allow_html=True)
+    clicked_strong = st.button("🚀 Strong Growth", key="btn_strong", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-fired = None
-for col, (key, label, style, rv, bv) in zip(bcols[:4], SCENARIOS):
-    with col:
-        is_active = (active == label.split(" ", 1)[1].strip() or active == label)
-        extra = " btn-active" if is_active else ""
-        if st.button(label, key=f"btn_{key}", use_container_width=True):
-            fired = (label, rv, bv)
+with bcol2:
+    st.markdown('<div id="btn-blue">', unsafe_allow_html=True)
+    clicked_efficient = st.button("✂️ Efficient Mode", key="btn_efficient", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with bcols[4]:
-    if st.button("↺ Reset", key="btn_reset", use_container_width=True):
-        fired = ("reset", 0, 0)
+with bcol3:
+    st.markdown('<div id="btn-amber">', unsafe_allow_html=True)
+    clicked_slowdown = st.button("📉 Slowdown", key="btn_slowdown", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
+with bcol4:
+    st.markdown('<div id="btn-red">', unsafe_allow_html=True)
+    clicked_crisis = st.button("⚠️ Crisis", key="btn_crisis", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# Apply fired scenario — update session state then rerun so sliders reflect new values
-if fired:
-    label, rv, bv = fired
-    st.session_state["rev_change"] = rv
-    st.session_state["burn_change"] = bv
-    st.session_state["active_scenario"] = None if label == "reset" else label
+with bcol5:
+    st.markdown('<div id="btn-gray">', unsafe_allow_html=True)
+    clicked_reset = st.button("↺ Reset", key="btn_reset", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)  # close scenario-panel
+
+# Process button clicks — update session state then rerun so sliders reflect new values
+if clicked_strong:
+    st.session_state["rev_change"] = 30
+    st.session_state["burn_change"] = 15
+    st.session_state["active_scenario"] = "Strong Growth"
+    st.rerun()
+elif clicked_efficient:
+    st.session_state["rev_change"] = 0
+    st.session_state["burn_change"] = -20
+    st.session_state["active_scenario"] = "Efficient Mode"
+    st.rerun()
+elif clicked_slowdown:
+    st.session_state["rev_change"] = -25
+    st.session_state["burn_change"] = 0
+    st.session_state["active_scenario"] = "Slowdown"
+    st.rerun()
+elif clicked_crisis:
+    st.session_state["rev_change"] = -40
+    st.session_state["burn_change"] = 20
+    st.session_state["active_scenario"] = "Crisis"
+    st.rerun()
+elif clicked_reset:
+    st.session_state["rev_change"] = 0
+    st.session_state["burn_change"] = 0
+    st.session_state["active_scenario"] = None
     st.rerun()
 
-# ─── Read current slider values from session state ───────────────────────────────
+# ─── Read values and apply scenario ─────────────────────────────────────────────
 rev_change  = st.session_state["rev_change"]
 burn_change = st.session_state["burn_change"]
 is_scenario = rev_change != 0 or burn_change != 0
 
-# ─── Apply Scenario to Data ──────────────────────────────────────────────────────
 scenario_df = apply_scenario(base_df, rev_change / 100, burn_change / 100)
 latest = scenario_df.iloc[-1]
 
-# ─── Dynamic Insight Banner ──────────────────────────────────────────────────────
+# ─── Insight Banner ──────────────────────────────────────────────────────────────
 runway_val = max(latest["runway_months"], 0)
 insight_type, insight_text = runway_insight(runway_val)
-st.markdown(
-    f'<div class="insight-box {insight_type}">{insight_text}</div>',
-    unsafe_allow_html=True,
-)
+st.markdown(f'<div class="insight-box {insight_type}">{insight_text}</div>',
+            unsafe_allow_html=True)
 
-# ─── KPI Row ─────────────────────────────────────────────────────────────────────
+# ─── KPI Cards ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Current Metrics — Month 24</div>', unsafe_allow_html=True)
 
 k1, k2, k3, k4, k5 = st.columns(5)
@@ -387,7 +346,7 @@ with c2:
                       yaxis_tickprefix="$", yaxis_tickformat=",")
     st.plotly_chart(fig, use_container_width=True)
 
-# Row 2: Cash on Hand (full width)
+# Row 2: Cash on Hand
 fig = go.Figure()
 if is_scenario:
     fig.add_trace(go.Scatter(x=month_labels, y=base_df["cash_on_hand"], name="Baseline Cash",
@@ -430,7 +389,7 @@ with c4:
                       barmode="group", yaxis_tickprefix="$", yaxis_tickformat=",")
     st.plotly_chart(fig, use_container_width=True)
 
-# ─── Raw Data Table ──────────────────────────────────────────────────────────────
+# ─── Raw Data ────────────────────────────────────────────────────────────────────
 with st.expander("🗂️  View underlying data"):
     display_df = scenario_df[["month","revenue","burn","net_burn","cash_on_hand",
                                "runway_months","headcount","funding_event"]].copy()

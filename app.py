@@ -271,13 +271,10 @@ with slider_col2:
               value=st.session_state["burn_change"],
               key="burn_change_widget")
 
-# If user manually moved a slider, sync that back to session state and clear scenario
-if st.session_state["rev_change_widget"] != st.session_state["rev_change"]:
+# Only sync slider → session state when user manually drags (no active scenario)
+if st.session_state["active_scenario"] is None:
     st.session_state["rev_change"] = st.session_state["rev_change_widget"]
-    st.session_state["active_scenario"] = None
-if st.session_state["burn_change_widget"] != st.session_state["burn_change"]:
     st.session_state["burn_change"] = st.session_state["burn_change_widget"]
-    st.session_state["active_scenario"] = None
 
 st.markdown('<p style="font-size:12px;color:#6b7280;margin:14px 0 10px 0;">⚡ Quick Scenarios</p>',
             unsafe_allow_html=True)

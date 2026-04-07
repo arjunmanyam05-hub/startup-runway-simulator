@@ -110,3 +110,34 @@ def apply_scenario(df: pd.DataFrame, rev_change: float, burn_change: float) -> p
     df2["runway_months"] = (df2["cash_on_hand"] / df2["net_burn"].clip(lower=1)).round(1)
 
     return df2
+
+def generate_custom_data(cash_start, rev_start, burn_start) -> pd.DataFrame:
+    """
+    Creates a 24-month projection based on user-inputted starting values.
+    """
+    n_months = 24
+    months = list(range(1, n_months + 1))
+    
+    # Simple projection: 10% monthly revenue growth, flat burn
+    revs = [rev_start * (1.10 ** (m-1)) for m in months]
+    burns = [burn_start] * n_months 
+    
+    cash_on_hand = []
+    current_cash = cash_start
+    for m in range(n_months):
+        current_cash = current_cash - burns[m] + revs[m]
+        cash_on_hand.append(max(current_cash, 0))
+        
+    df = pd.DataFrame({
+        "month": months,
+        "revenue": revs,
+        "burn": burns,
+        "cash_on_hand": cash_on_hand,
+        "headcount": [5] * n_months, # Default placeholder
+        "funding_event": [0] * n_months,
+    })
+    
+    df["net_burn"] = df["burn"] - df["revenue"]
+    df["runway_months"] = (df["cash_on_hand"] / df["net_burn"].clip(lower=1)).round(1)
+    
+    return df

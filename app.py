@@ -233,12 +233,27 @@ def runway_insight(runway: float) -> tuple:
     else:
         return ("success", f"✅ {runway:.1f} months of runway. Strong position — enough breathing room to focus on growth. Series B conversations can happen from a position of strength.")
 
-# ─── Load Data ──────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_base_data():
-    return generate_startup_data()
+# ─── Data Entry Mode ──────────────────────────────────────────────────────────
+st.markdown('<div class="section-header">1. Setup Your Data</div>', unsafe_allow_html=True)
+data_mode = st.radio("Select starting point:", ["Demo Mode (Sample Data)", "Manual Entry (My Numbers)"], horizontal=True)
 
-base_df = load_base_data()
+if data_mode == "Manual Entry (My Numbers)":
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        user_cash = st.number_input("Current Cash ($)", value=500000, step=10000)
+    with col_b:
+        user_rev = st.number_input("Monthly Revenue ($)", value=20000, step=1000)
+    with col_c:
+        user_burn = st.number_input("Monthly Burn ($)", value=60000, step=1000)
+    
+    # Use our new function from data.py
+    from data import generate_custom_data
+    base_df = generate_custom_data(user_cash, user_rev, user_burn)
+else:
+    @st.cache_data
+    def load_base_data():
+        return generate_startup_data()
+    base_df = load_base_data()
 
 # ─── Header ─────────────────────────────────────────────────────────────────────
 header_col, badge_col = st.columns([5, 1])

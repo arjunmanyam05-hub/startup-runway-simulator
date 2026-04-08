@@ -223,7 +223,9 @@ with header_col:
     st.markdown("## 📈 Startup Runway & Growth Simulator")
     st.markdown(
         '<p style="color:#6b7280;font-size:14px;margin-top:-8px;">'
-        'Default Alive / Default Dead calculator · 24-month projection</p>',
+        'Enter your startup\'s numbers to find out if you\'re <strong style="color:#34d399">Default Alive</strong> or '
+        '<strong style="color:#f87171">Default Dead</strong> — then simulate what happens when assumptions change. '
+        '<span style="color:#4b5563">Nothing is saved or stored. Numbers disappear on refresh.</span></p>',
         unsafe_allow_html=True)
 with badge_col:
     if st.session_state["active_scenario"]:

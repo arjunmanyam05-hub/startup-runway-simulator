@@ -81,23 +81,18 @@ def generate_startup_data(seed: int = 42) -> pd.DataFrame:
 
 def apply_scenario(df: pd.DataFrame, rev_change: float, burn_change: float) -> pd.DataFrame:
     """
-    Apply percentage changes to revenue and burn across the full dataset.
-    Recalculates cash and runway from scratch.
-
-    Args:
-        df: Original dataset
-        rev_change: Revenue multiplier delta, e.g. 0.10 = +10%
-        burn_change: Burn multiplier delta, e.g. -0.15 = -15%
-
-    Returns:
-        New dataframe with adjusted figures
+    Apply percentage changes and recalculate cash based on the 
+    ACTUAL starting balance of the provided dataframe.
     """
     df2 = df.copy()
     df2["revenue"] = (df2["revenue"] * (1 + rev_change)).round(0).astype(int)
     df2["burn"] = (df2["burn"] * (1 + burn_change)).round(0).astype(int)
 
-    # Recalculate cash from scratch
-    cash = 1_500_000
+    # We calculate the "Starting Cash" by looking at the first month's data
+    first_row = df.iloc[0]
+    # Starting Cash = (First Month Cash) + (First Month Burn) - (First Month Rev) - (First Month Funding)
+    cash = first_row["cash_on_hand"] + first_row["burn"] - first_row["revenue"] - first_row["funding_event"]
+    
     new_cash = []
     for _, row in df2.iterrows():
         cash += row["funding_event"]
@@ -140,7 +135,7 @@ def generate_custom_data(cash_start, rev_start, burn_start, growth_rate=0.10) ->
         "burn": burns,
         "cash_on_hand": cash_on_hand,
         "headcount": [5] * n_months, 
-        "funding_event": [0] * n_months, # No "magic" funding in manual mode
+        "funding_event": [0] * n_months, # This ensures NO magic money appears at M12
     })
     
     df["net_burn"] = df["burn"] - df["revenue"]

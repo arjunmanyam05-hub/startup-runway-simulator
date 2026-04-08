@@ -320,9 +320,11 @@ st.markdown(f'<div class="insight-box {insight_type}">{insight_text}</div>', uns
 # ─── KPI Cards ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Current Metrics — Today vs. Month 24 Projection</div>', unsafe_allow_html=True)
 
-k1, k2, k3, k4, k5 = st.columns(5)
-rev_growth_pct = ((scenario_df.iloc[-1]["revenue"] / scenario_df.iloc[-2]["revenue"]) - 1) * 100
-runway_text    = "5+ yrs" if runway_val >= 5.0 else f"{runway_val:.1f} yrs"
+k1, k2, k3, k4, k5, k6 = st.columns(6)
+rev_growth_pct  = ((scenario_df.iloc[-1]["revenue"] / scenario_df.iloc[-2]["revenue"]) - 1) * 100
+runway_text_now = "5+ yrs" if runway_val >= 5.0 else f"{runway_val:.1f} yrs"
+runway_m24      = max(scenario_df.iloc[-1]["runway_years"], 0)
+runway_text_m24 = "5+ yrs" if runway_m24 >= 5.0 else f"{runway_m24:.1f} yrs"
 
 with k1:
     kpi_card("Monthly Revenue", fmt_currency(latest["revenue"]),
@@ -335,7 +337,9 @@ with k3:
 with k4:
     kpi_card("Cash on Hand", fmt_currency(latest["cash_on_hand"]))
 with k5:
-    kpi_card("Runway", runway_text)
+    kpi_card("Runway Now", runway_text_now)
+with k6:
+    kpi_card("Runway @ M24", runway_text_m24)
 
 # ─── Scenario Delta Row ──────────────────────────────────────────────────────────
 if is_scenario:

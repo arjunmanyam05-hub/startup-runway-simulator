@@ -238,13 +238,20 @@ st.markdown('<div class="section-header">1. Setup Your Data</div>', unsafe_allow
 data_mode = st.radio("Select starting point:", ["Demo Mode (Sample Data)", "Manual Entry (My Numbers)"], horizontal=True)
 
 if data_mode == "Manual Entry (My Numbers)":
-    col_a, col_b, col_c = st.columns(3)
+    col_a, col_b, col_c, col_d = st.columns(4) # Changed 3 to 4
     with col_a:
         user_cash = st.number_input("Current Cash ($)", value=500000, step=10000)
     with col_b:
         user_rev = st.number_input("Monthly Revenue ($)", value=20000, step=1000)
     with col_c:
         user_burn = st.number_input("Monthly Burn ($)", value=60000, step=1000)
+    with col_d:
+        # This lets them pick growth (e.g., 10% = 0.10)
+        user_growth = st.slider("Monthly Growth (%)", 0, 30, 10) / 100
+    
+    from data import generate_custom_data
+    # We now pass user_growth to the function
+    base_df = generate_custom_data(user_cash, user_rev, user_burn, user_growth)
     
     # Use our new function from data.py
     from data import generate_custom_data

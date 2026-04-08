@@ -111,15 +111,21 @@ def apply_scenario(df: pd.DataFrame, rev_change: float, burn_change: float) -> p
 
     return df2
 
-def generate_custom_data(cash_start, rev_start, burn_start) -> pd.DataFrame:
+def generate_custom_data(cash_start, rev_start, burn_start, growth_rate=0.10) -> pd.DataFrame:
     """
-    Creates a 24-month projection based on user-inputted starting values.
+    Creates a 24-month projection starting from TODAY using real founder numbers.
     """
     n_months = 24
     months = list(range(1, n_months + 1))
     
-    # Simple projection: 10% monthly revenue growth, flat burn
-    revs = [rev_start * (1.10 ** (m-1)) for m in months]
+    # We use the user's growth rate instead of the hardcoded demo jumps
+    revs = []
+    current_rev = rev_start
+    for m in months:
+        revs.append(round(current_rev))
+        current_rev *= (1 + growth_rate) 
+        
+    # We assume burn stays flat for this "napkin" projection
     burns = [burn_start] * n_months 
     
     cash_on_hand = []
@@ -133,8 +139,8 @@ def generate_custom_data(cash_start, rev_start, burn_start) -> pd.DataFrame:
         "revenue": revs,
         "burn": burns,
         "cash_on_hand": cash_on_hand,
-        "headcount": [5] * n_months, # Default placeholder
-        "funding_event": [0] * n_months,
+        "headcount": [5] * n_months, 
+        "funding_event": [0] * n_months, # No "magic" funding in manual mode
     })
     
     df["net_burn"] = df["burn"] - df["revenue"]

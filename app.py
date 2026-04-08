@@ -82,44 +82,19 @@ st.markdown("""
     .insight-box.danger  { background: #1c0a0a; border-left-color: #ef4444; color: #fca5a5; }
     .insight-box.success { background: #052e16; border-left-color: #22c55e; color: #86efac; }
 
-    /* Quick Scenario Buttons */
-    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button {
-        background: #052e16 !important; border: 1.5px solid #16a34a !important; color: #4ade80 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button:hover {
-        background: #064e24 !important; box-shadow: 0 0 10px rgba(74,222,128,0.25) !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button {
-        background: #0c1a2e !important; border: 1.5px solid #2563eb !important; color: #60a5fa !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button:hover {
-        background: #162d4e !important; box-shadow: 0 0 10px rgba(96,165,250,0.25) !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button {
-        background: #1c1407 !important; border: 1.5px solid #d97706 !important; color: #fbbf24 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button:hover {
-        background: #2e200a !important; box-shadow: 0 0 10px rgba(251,191,36,0.25) !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button {
-        background: #1c0a0a !important; border: 1.5px solid #dc2626 !important; color: #f87171 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button:hover {
-        background: #2e1010 !important; box-shadow: 0 0 10px rgba(248,113,113,0.25) !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button {
-        background: #161b27 !important; border: 1.5px solid #4b5563 !important; color: #d1d5db !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button:hover {
-        background: #1f2937 !important; border-color: #9ca3af !important; color: #f9fafb !important;
-    }
-
+    /* Quick Scenario Buttons — base style only, colors set via JS below */
     div[data-testid="stButton"] button {
         font-family: 'DM Sans', sans-serif !important; font-weight: 600 !important;
         font-size: 13px !important; border-radius: 8px !important;
         width: 100% !important; padding: 8px 12px !important;
         transition: all 0.15s ease !important;
     }
+
+    .btn-green { background: #052e16 !important; border: 1.5px solid #16a34a !important; color: #4ade80 !important; }
+    .btn-blue  { background: #0c1a2e !important; border: 1.5px solid #2563eb !important; color: #60a5fa !important; }
+    .btn-amber { background: #1c1407 !important; border: 1.5px solid #d97706 !important; color: #fbbf24 !important; }
+    .btn-red   { background: #1c0a0a !important; border: 1.5px solid #dc2626 !important; color: #f87171 !important; }
+    .btn-gray  { background: #161b27 !important; border: 1.5px solid #4b5563 !important; color: #d1d5db !important; }
 
     #MainMenu, footer, header { visibility: hidden; }
     [data-testid="stSidebar"] { display: none; }
@@ -128,7 +103,36 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Color Palette ──────────────────────────────────────────────────────────────
+# ─── JS: Color scenario buttons reliably (works on Streamlit Cloud) ─────────────
+st.markdown("""
+<script>
+function styleScenarioButtons() {
+    const btns = window.parent.document.querySelectorAll('button[kind="secondary"]');
+    const styles = [
+        {bg:'#052e16', border:'#16a34a', color:'#4ade80'},  // Strong Growth
+        {bg:'#0c1a2e', border:'#2563eb', color:'#60a5fa'},  // Efficient Mode
+        {bg:'#1c1407', border:'#d97706', color:'#fbbf24'},  // Slowdown
+        {bg:'#1c0a0a', border:'#dc2626', color:'#f87171'},  // Crisis
+        {bg:'#161b27', border:'#4b5563', color:'#d1d5db'},  // Reset
+    ];
+    let scenarioIdx = 0;
+    btns.forEach(btn => {
+        const label = btn.innerText.trim();
+        if (['🚀 Strong Growth','✂️ Efficient Mode','📉 Slowdown','⚠️ Crisis','↺ Reset'].includes(label)) {
+            const s = styles[scenarioIdx % styles.length];
+            btn.style.setProperty('background', s.bg, 'important');
+            btn.style.setProperty('border', '1.5px solid ' + s.border, 'important');
+            btn.style.setProperty('color', s.color, 'important');
+            scenarioIdx++;
+        }
+    });
+}
+// Run on load and after any Streamlit rerenders
+const observer = new MutationObserver(styleScenarioButtons);
+observer.observe(window.parent.document.body, {childList: true, subtree: true});
+styleScenarioButtons();
+</script>
+""", unsafe_allow_html=True)
 COLORS = {
     "revenue": "#34d399", "burn": "#f87171", "cash": "#60a5fa",
     "baseline": "#374151", "bg": "#0f1117", "card_bg": "#161b27",
@@ -305,15 +309,16 @@ burn_pct = st.session_state["burn_pct"]
 is_scenario = rev_pct != 0 or burn_pct != 0
 
 scenario_df = apply_scenario(base_df, rev_pct / 100, burn_pct / 100)
-latest      = scenario_df.iloc[-1]
-runway_val  = max(latest["runway_years"], 0)
+latest      = scenario_df.iloc[-1]   # Month 24 — used for revenue/burn/cash KPIs
+current     = scenario_df.iloc[0]    # Month 1  — used for runway (honest current state)
+runway_val  = max(current["runway_years"], 0)
 
 # ─── Insight Banner ──────────────────────────────────────────────────────────────
 insight_type, insight_text = runway_insight(runway_val)
 st.markdown(f'<div class="insight-box {insight_type}">{insight_text}</div>', unsafe_allow_html=True)
 
 # ─── KPI Cards ───────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">Current Metrics — Month 24</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">Current Metrics — Today vs. Month 24 Projection</div>', unsafe_allow_html=True)
 
 k1, k2, k3, k4, k5 = st.columns(5)
 rev_growth_pct = ((scenario_df.iloc[-1]["revenue"] / scenario_df.iloc[-2]["revenue"]) - 1) * 100
@@ -334,11 +339,12 @@ with k5:
 
 # ─── Scenario Delta Row ──────────────────────────────────────────────────────────
 if is_scenario:
-    base_latest  = base_df.iloc[-1]
-    rev_delta    = latest["revenue"]       - base_latest["revenue"]
-    burn_delta   = latest["burn"]          - base_latest["burn"]
-    cash_delta   = latest["cash_on_hand"]  - base_latest["cash_on_hand"]
-    runway_delta = runway_val              - max(base_latest["runway_years"], 0)
+    base_latest   = base_df.iloc[-1]
+    base_current  = base_df.iloc[0]
+    rev_delta     = latest["revenue"]      - base_latest["revenue"]
+    burn_delta    = latest["burn"]         - base_latest["burn"]
+    cash_delta    = latest["cash_on_hand"] - base_latest["cash_on_hand"]
+    runway_delta  = runway_val             - max(base_current["runway_years"], 0)
 
     def delta_arrow(val, good="positive"):
         if abs(val) < 1: return "─"

@@ -1,14 +1,14 @@
 """
 Startup Runway & Growth Simulator
 ----------------------------------
-Interactive financial health dashboard for an early-stage B2B SaaS startup.
+Back-of-the-napkin Default Alive / Default Dead calculator for founders.
 Built with: Python · Streamlit · Plotly · pandas
 """
 
 import re
 import streamlit as st
 import plotly.graph_objects as go
-from data import generate_startup_data, apply_scenario
+from data import generate_startup_data, generate_custom_data, apply_scenario
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -18,16 +18,13 @@ st.set_page_config(
 )
 
 # ─── Session State Init ──────────────────────────────────────────────────────────
-if "rev_change" not in st.session_state:
-    st.session_state["rev_change"] = 0
-if "burn_change" not in st.session_state:
-    st.session_state["burn_change"] = 0
-if "active_scenario" not in st.session_state:
-    st.session_state["active_scenario"] = None
-if "rev_change_widget" not in st.session_state:
-    st.session_state["rev_change_widget"] = 0
-if "burn_change_widget" not in st.session_state:
-    st.session_state["burn_change_widget"] = 0
+for key, default in {
+    "rev_pct": 0,
+    "burn_pct": 0,
+    "active_scenario": None,
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
 # ─── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -65,99 +62,69 @@ st.markdown("""
 
     .scenario-panel {
         background: #161b27; border: 1px solid #1e2535;
-        border-radius: 12px; padding: 20px 24px 20px 24px; margin-bottom: 8px;
-    }
-
-    /* Base button style for ALL buttons */
-    div[data-testid="stButton"] button {
-        font-family: 'DM Sans', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        padding: 8px 12px !important;
-        transition: all 0.15s ease !important;
-        cursor: pointer !important;
-    }
-
-    /* Strong Growth — green */
-    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button,
-    div[data-testid="stButton"]:nth-of-type(1) button {
-        background: #052e16 !important;
-        border: 1.5px solid #16a34a !important;
-        color: #4ade80 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button:hover {
-        background: #064e24 !important;
-        box-shadow: 0 0 10px rgba(74,222,128,0.25) !important;
-    }
-
-    /* Efficient Mode — blue */
-    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button {
-        background: #0c1a2e !important;
-        border: 1.5px solid #2563eb !important;
-        color: #60a5fa !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button:hover {
-        background: #162d4e !important;
-        box-shadow: 0 0 10px rgba(96,165,250,0.25) !important;
-    }
-
-    /* Slowdown — amber */
-    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button {
-        background: #1c1407 !important;
-        border: 1.5px solid #d97706 !important;
-        color: #fbbf24 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button:hover {
-        background: #2e200a !important;
-        box-shadow: 0 0 10px rgba(251,191,36,0.25) !important;
-    }
-
-    /* Crisis — red */
-    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button {
-        background: #1c0a0a !important;
-        border: 1.5px solid #dc2626 !important;
-        color: #f87171 !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button:hover {
-        background: #2e1010 !important;
-        box-shadow: 0 0 10px rgba(248,113,113,0.25) !important;
-    }
-
-    /* Reset — neutral gray */
-    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button {
-        background: #161b27 !important;
-        border: 1.5px solid #4b5563 !important;
-        color: #d1d5db !important;
-    }
-    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button:hover {
-        background: #1f2937 !important;
-        border-color: #9ca3af !important;
-        color: #f9fafb !important;
+        border-radius: 12px; padding: 20px 24px; margin-bottom: 8px;
     }
 
     .active-badge {
-        display:inline-flex; align-items:center; gap:6px;
-        background:#1a2436; border:1px solid #2d4a6e;
-        border-radius:20px; padding:5px 14px;
-        font-size:12px; color:#60a5fa; font-weight:600;
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #1a2436; border: 1px solid #2d4a6e;
+        border-radius: 20px; padding: 5px 14px;
+        font-size: 12px; color: #60a5fa; font-weight: 600;
     }
 
     .insight-box {
-        border-left:3px solid #60a5fa; border-radius:0 8px 8px 0;
-        padding:12px 16px; margin:12px 0 4px 0;
-        font-size:13px; line-height:1.6;
+        border-left: 3px solid #60a5fa; border-radius: 0 8px 8px 0;
+        padding: 12px 16px; margin: 12px 0 4px 0;
+        font-size: 13px; line-height: 1.6;
     }
-    .insight-box.info    { background:#0d1a2e; border-left-color:#60a5fa; color:#93c5fd; }
-    .insight-box.warning { background:#1c1407; border-left-color:#f59e0b; color:#fcd34d; }
-    .insight-box.danger  { background:#1c0a0a; border-left-color:#ef4444; color:#fca5a5; }
-    .insight-box.success { background:#052e16; border-left-color:#22c55e; color:#86efac; }
+    .insight-box.info    { background: #0d1a2e; border-left-color: #60a5fa; color: #93c5fd; }
+    .insight-box.warning { background: #1c1407; border-left-color: #f59e0b; color: #fcd34d; }
+    .insight-box.danger  { background: #1c0a0a; border-left-color: #ef4444; color: #fca5a5; }
+    .insight-box.success { background: #052e16; border-left-color: #22c55e; color: #86efac; }
 
-    #MainMenu, footer, header { visibility:hidden; }
-    [data-testid="stSidebar"] { display:none; }
-    .block-container { padding-top:1.5rem; max-width:1400px; }
-    hr { border-color:#1e2535; margin:24px 0; }
+    /* Quick Scenario Buttons */
+    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button {
+        background: #052e16 !important; border: 1.5px solid #16a34a !important; color: #4ade80 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_strong"]) button:hover {
+        background: #064e24 !important; box-shadow: 0 0 10px rgba(74,222,128,0.25) !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button {
+        background: #0c1a2e !important; border: 1.5px solid #2563eb !important; color: #60a5fa !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_efficient"]) button:hover {
+        background: #162d4e !important; box-shadow: 0 0 10px rgba(96,165,250,0.25) !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button {
+        background: #1c1407 !important; border: 1.5px solid #d97706 !important; color: #fbbf24 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_slowdown"]) button:hover {
+        background: #2e200a !important; box-shadow: 0 0 10px rgba(251,191,36,0.25) !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button {
+        background: #1c0a0a !important; border: 1.5px solid #dc2626 !important; color: #f87171 !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_crisis"]) button:hover {
+        background: #2e1010 !important; box-shadow: 0 0 10px rgba(248,113,113,0.25) !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button {
+        background: #161b27 !important; border: 1.5px solid #4b5563 !important; color: #d1d5db !important;
+    }
+    div[data-testid="stButton"]:has(button[data-testid="btn_reset"]) button:hover {
+        background: #1f2937 !important; border-color: #9ca3af !important; color: #f9fafb !important;
+    }
+
+    div[data-testid="stButton"] button {
+        font-family: 'DM Sans', sans-serif !important; font-weight: 600 !important;
+        font-size: 13px !important; border-radius: 8px !important;
+        width: 100% !important; padding: 8px 12px !important;
+        transition: all 0.15s ease !important;
+    }
+
+    #MainMenu, footer, header { visibility: hidden; }
+    [data-testid="stSidebar"] { display: none; }
+    .block-container { padding-top: 1.5rem; max-width: 1400px; }
+    hr { border-color: #1e2535; margin: 24px 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -221,46 +188,24 @@ def add_funding_annotation(fig: go.Figure, df) -> go.Figure:
                            font=dict(color="#fbbf24", size=10), yanchor="bottom")
     return fig
 
-def runway_insight(runway: float) -> tuple:
-    if runway <= 0:
+def runway_insight(runway_yrs: float) -> tuple:
+    if runway_yrs <= 0:
         return ("danger", "⛔ Company has run out of cash under these assumptions. Emergency fundraising or deep cuts required immediately.")
-    elif runway < 6:
-        return ("danger", f"🚨 Only {runway:.1f} months of runway. The company needs to raise or cut costs urgently — most investors want 18+ months before leading a round.")
-    elif runway < 12:
-        return ("warning", f"⚠️ {runway:.1f} months of runway. Below the typical 18-month fundraising buffer. Time to start investor conversations or tighten operations.")
-    elif runway < 18:
-        return ("warning", f"🟡 {runway:.1f} months of runway. Healthy but worth monitoring. A 10% revenue miss could push this toward the danger zone.")
+    elif runway_yrs < 0.5:
+        return ("danger", f"🚨 Only {runway_yrs:.1f} years of runway. Needs to raise or cut costs urgently — most investors want 18+ months before leading a round.")
+    elif runway_yrs < 1.0:
+        return ("warning", f"⚠️ {runway_yrs:.1f} years of runway. Below the typical 18-month fundraising buffer. Time to start investor conversations.")
+    elif runway_yrs < 1.5:
+        return ("warning", f"🟡 {runway_yrs:.1f} years of runway. Healthy but worth monitoring. A 10% revenue miss could push toward the danger zone.")
+    elif runway_yrs >= 5.0:
+        return ("success", "✅ Default Alive. Revenue exceeds burn — this company can reach profitability without raising again.")
     else:
-        return ("success", f"✅ {runway:.1f} months of runway. Strong position — enough breathing room to focus on growth. Series B conversations can happen from a position of strength.")
+        return ("success", f"✅ {runway_yrs:.1f} years of runway. Strong position — enough breathing room to focus on growth.")
 
-# ─── Data Entry Mode ──────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">1. Setup Your Data</div>', unsafe_allow_html=True)
-data_mode = st.radio("Select starting point:", ["Demo Mode (Sample Data)", "Manual Entry (My Numbers)"], horizontal=True)
-
-if data_mode == "Manual Entry (My Numbers)":
-    col_a, col_b, col_c, col_d = st.columns(4) # Changed 3 to 4
-    with col_a:
-        user_cash = st.number_input("Current Cash ($)", value=500000, step=10000)
-    with col_b:
-        user_rev = st.number_input("Monthly Revenue ($)", value=20000, step=1000)
-    with col_c:
-        user_burn = st.number_input("Monthly Burn ($)", value=60000, step=1000)
-    with col_d:
-        # This lets them pick growth (e.g., 10% = 0.10)
-        user_growth = st.slider("Monthly Growth (%)", 0, 30, 10) / 100
-    
-    from data import generate_custom_data
-    # We now pass user_growth to the function
-    base_df = generate_custom_data(user_cash, user_rev, user_burn, user_growth)
-    
-    # Use our new function from data.py
-    from data import generate_custom_data
-    base_df = generate_custom_data(user_cash, user_rev, user_burn)
-else:
-    @st.cache_data
-    def load_base_data():
-        return generate_startup_data()
-    base_df = load_base_data()
+# ─── Load Base Data ──────────────────────────────────────────────────────────────
+@st.cache_data
+def load_demo_data():
+    return generate_startup_data()
 
 # ─── Header ─────────────────────────────────────────────────────────────────────
 header_col, badge_col = st.columns([5, 1])
@@ -268,7 +213,7 @@ with header_col:
     st.markdown("## 📈 Startup Runway & Growth Simulator")
     st.markdown(
         '<p style="color:#6b7280;font-size:14px;margin-top:-8px;">'
-        'Financial health dashboard · 24-month early-stage B2B SaaS model</p>',
+        'Default Alive / Default Dead calculator · 24-month projection</p>',
         unsafe_allow_html=True)
 with badge_col:
     if st.session_state["active_scenario"]:
@@ -277,91 +222,102 @@ with badge_col:
             f'<span class="active-badge">📊 {st.session_state["active_scenario"]}</span></div>',
             unsafe_allow_html=True)
 
-# ─── Scenario Controls ───────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">Scenario Controls</div>', unsafe_allow_html=True)
+# ─── 1. Data Setup ───────────────────────────────────────────────────────────────
+st.markdown('<div class="section-header">1. Setup Your Data</div>', unsafe_allow_html=True)
+data_mode = st.radio("Select mode:", ["Demo Mode", "Manual Entry"], horizontal=True,
+                     help="Demo Mode uses a synthetic SaaS startup story. Manual Entry uses your real numbers.")
+
+if data_mode == "Manual Entry":
+    st.markdown('<div class="scenario-panel">', unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: u_cash  = st.number_input("💰 Cash on Hand ($)", value=500_000, step=10_000, min_value=0)
+    with col2: u_rev   = st.number_input("📈 Monthly Revenue ($)", value=20_000, step=1_000, min_value=0)
+    with col3: u_burn  = st.number_input("🔥 Monthly Burn ($)", value=60_000, step=1_000, min_value=1)
+    with col4: u_growth = st.slider("📊 Monthly Growth Rate", 0, 30, 10, format="%d%%") / 100
+    st.markdown('</div>', unsafe_allow_html=True)
+    base_df = generate_custom_data(u_cash, u_rev, u_burn, u_growth)
+    # Reset scenarios when inputs change
+    st.session_state["rev_pct"] = 0
+    st.session_state["burn_pct"] = 0
+    st.session_state["active_scenario"] = None
+else:
+    base_df = load_demo_data()
+
+# ─── 2. Scenario Controls ────────────────────────────────────────────────────────
+st.markdown('<div class="section-header">2. Scenario Controls</div>', unsafe_allow_html=True)
 st.markdown('<div class="scenario-panel">', unsafe_allow_html=True)
 
 slider_col1, slider_col2 = st.columns(2)
 with slider_col1:
-    st.slider("📈 Revenue Change (%)", min_value=-50, max_value=100, step=5,
-              format="%d%%", help="Shift all monthly revenue up or down.",
-              value=st.session_state["rev_change"],
-              key="rev_change_widget")
+    rev_slider = st.slider("📈 Revenue Change (%)", min_value=-50, max_value=100,
+                           value=st.session_state["rev_pct"], step=5, format="%d%%",
+                           help="Shift all monthly revenue up or down.")
 with slider_col2:
-    st.slider("🔥 Burn Rate Change (%)", min_value=-40, max_value=80, step=5,
-              format="%d%%", help="Shift all monthly burn up or down.",
-              value=st.session_state["burn_change"],
-              key="burn_change_widget")
+    burn_slider = st.slider("🔥 Burn Rate Change (%)", min_value=-40, max_value=80,
+                            value=st.session_state["burn_pct"], step=5, format="%d%%",
+                            help="Shift all monthly burn up or down.")
 
-# Only sync slider → session state when user manually drags (no active scenario)
-if st.session_state["active_scenario"] is None:
-    st.session_state["rev_change"] = st.session_state["rev_change_widget"]
-    st.session_state["burn_change"] = st.session_state["burn_change_widget"]
+# Sync manual slider drags back to session state
+st.session_state["rev_pct"]  = rev_slider
+st.session_state["burn_pct"] = burn_slider
+# Clear scenario badge if user manually moved sliders away from scenario values
+if st.session_state["active_scenario"] is not None:
+    expected = {
+        "Strong Growth": (30, 15), "Efficient Mode": (0, -20),
+        "Slowdown": (-25, 0), "Crisis": (-40, 20),
+    }
+    exp = expected.get(st.session_state["active_scenario"])
+    if exp and (rev_slider != exp[0] or burn_slider != exp[1]):
+        st.session_state["active_scenario"] = None
 
 st.markdown('<p style="font-size:12px;color:#6b7280;margin:14px 0 10px 0;">⚡ Quick Scenarios</p>',
             unsafe_allow_html=True)
 
 bcol1, bcol2, bcol3, bcol4, bcol5, _ = st.columns([1.1, 1.1, 1, 1, 0.85, 2])
+with bcol1: clicked_strong   = st.button("🚀 Strong Growth", key="btn_strong",   use_container_width=True)
+with bcol2: clicked_efficient = st.button("✂️ Efficient Mode", key="btn_efficient", use_container_width=True)
+with bcol3: clicked_slowdown  = st.button("📉 Slowdown",       key="btn_slowdown",  use_container_width=True)
+with bcol4: clicked_crisis    = st.button("⚠️ Crisis",         key="btn_crisis",    use_container_width=True)
+with bcol5: clicked_reset     = st.button("↺ Reset",           key="btn_reset",     use_container_width=True)
 
-with bcol1:
-    clicked_strong = st.button("🚀 Strong Growth", key="btn_strong", use_container_width=True)
-with bcol2:
-    clicked_efficient = st.button("✂️ Efficient Mode", key="btn_efficient", use_container_width=True)
-with bcol3:
-    clicked_slowdown = st.button("📉 Slowdown", key="btn_slowdown", use_container_width=True)
-with bcol4:
-    clicked_crisis = st.button("⚠️ Crisis", key="btn_crisis", use_container_width=True)
-with bcol5:
-    clicked_reset = st.button("↺ Reset", key="btn_reset", use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)  # close scenario-panel
-
-# Process button clicks — update session state then rerun so sliders reflect new values
+# Handle button clicks — set session state and rerun so sliders repaint at new value
 if clicked_strong:
-    st.session_state["rev_change"] = 30
-    st.session_state["burn_change"] = 15
-    st.session_state["active_scenario"] = "Strong Growth"
-    st.rerun()
+    st.session_state["rev_pct"] = 30;  st.session_state["burn_pct"] = 15
+    st.session_state["active_scenario"] = "Strong Growth";  st.rerun()
 elif clicked_efficient:
-    st.session_state["rev_change"] = 0
-    st.session_state["burn_change"] = -20
-    st.session_state["active_scenario"] = "Efficient Mode"
-    st.rerun()
+    st.session_state["rev_pct"] = 0;   st.session_state["burn_pct"] = -20
+    st.session_state["active_scenario"] = "Efficient Mode"; st.rerun()
 elif clicked_slowdown:
-    st.session_state["rev_change"] = -25
-    st.session_state["burn_change"] = 0
-    st.session_state["active_scenario"] = "Slowdown"
-    st.rerun()
+    st.session_state["rev_pct"] = -25; st.session_state["burn_pct"] = 0
+    st.session_state["active_scenario"] = "Slowdown";       st.rerun()
 elif clicked_crisis:
-    st.session_state["rev_change"] = -40
-    st.session_state["burn_change"] = 20
-    st.session_state["active_scenario"] = "Crisis"
-    st.rerun()
+    st.session_state["rev_pct"] = -40; st.session_state["burn_pct"] = 20
+    st.session_state["active_scenario"] = "Crisis";         st.rerun()
 elif clicked_reset:
-    st.session_state["rev_change"] = 0
-    st.session_state["burn_change"] = 0
-    st.session_state["active_scenario"] = None
-    st.rerun()
+    st.session_state["rev_pct"] = 0;   st.session_state["burn_pct"] = 0
+    st.session_state["active_scenario"] = None;             st.rerun()
 
-# ─── Read values and apply scenario ─────────────────────────────────────────────
-rev_change  = st.session_state["rev_change"]
-burn_change = st.session_state["burn_change"]
-is_scenario = rev_change != 0 or burn_change != 0
+# ─── Apply Scenario ──────────────────────────────────────────────────────────────
+rev_pct  = st.session_state["rev_pct"]
+burn_pct = st.session_state["burn_pct"]
+is_scenario = rev_pct != 0 or burn_pct != 0
 
-scenario_df = apply_scenario(base_df, rev_change / 100, burn_change / 100)
-latest = scenario_df.iloc[-1]
+scenario_df = apply_scenario(base_df, rev_pct / 100, burn_pct / 100)
+latest      = scenario_df.iloc[-1]
+runway_val  = max(latest["runway_years"], 0)
 
 # ─── Insight Banner ──────────────────────────────────────────────────────────────
-runway_val = max(latest["runway_months"], 0)
 insight_type, insight_text = runway_insight(runway_val)
-st.markdown(f'<div class="insight-box {insight_type}">{insight_text}</div>',
-            unsafe_allow_html=True)
+st.markdown(f'<div class="insight-box {insight_type}">{insight_text}</div>', unsafe_allow_html=True)
 
 # ─── KPI Cards ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">Current Metrics — Month 24</div>', unsafe_allow_html=True)
 
 k1, k2, k3, k4, k5 = st.columns(5)
 rev_growth_pct = ((scenario_df.iloc[-1]["revenue"] / scenario_df.iloc[-2]["revenue"]) - 1) * 100
+runway_text    = "5+ yrs" if runway_val >= 5.0 else f"{runway_val:.1f} yrs"
 
 with k1:
     kpi_card("Monthly Revenue", fmt_currency(latest["revenue"]),
@@ -370,32 +326,32 @@ with k2:
     kpi_card("Monthly Burn", fmt_currency(latest["burn"]))
 with k3:
     net = latest["net_burn"]
-    kpi_card("Net Burn" if net > 0 else "Net Revenue", fmt_currency(net),
-             delta_good="negative" if net > 0 else "positive")
+    kpi_card("Net Burn" if net > 0 else "Net Revenue", fmt_currency(abs(net)))
 with k4:
     kpi_card("Cash on Hand", fmt_currency(latest["cash_on_hand"]))
 with k5:
-    kpi_card("Runway", f"{runway_val:.1f} mo")
+    kpi_card("Runway", runway_text)
 
-# ─── Scenario Delta Row (only shown when a scenario is active) ──────────────────
+# ─── Scenario Delta Row ──────────────────────────────────────────────────────────
 if is_scenario:
-    base_latest = base_df.iloc[-1]
-    rev_delta = latest["revenue"] - base_latest["revenue"]
-    burn_delta = latest["burn"] - base_latest["burn"]
-    cash_delta = latest["cash_on_hand"] - base_latest["cash_on_hand"]
-    runway_delta = runway_val - max(base_latest["runway_months"], 0)
+    base_latest  = base_df.iloc[-1]
+    rev_delta    = latest["revenue"]       - base_latest["revenue"]
+    burn_delta   = latest["burn"]          - base_latest["burn"]
+    cash_delta   = latest["cash_on_hand"]  - base_latest["cash_on_hand"]
+    runway_delta = runway_val              - max(base_latest["runway_years"], 0)
 
     def delta_arrow(val, good="positive"):
-        if val == 0: return "─"
-        up = val > 0
+        if abs(val) < 1: return "─"
+        up    = val > 0
         arrow = "▲" if up else "▼"
         color = "#34d399" if (up and good == "positive") or (not up and good == "negative") else "#f87171"
-        return f'<span style="color:{color};font-size:11px;font-weight:600">{arrow} {fmt_currency(abs(val)) if abs(val) >= 100 else f"{abs(val):.1f}"}</span>'
+        label = fmt_currency(abs(val)) if abs(val) >= 100 else f"{abs(val):.1f}"
+        return f'<span style="color:{color};font-size:11px;font-weight:600">{arrow} {label}</span>'
 
     st.markdown(f"""
     <div style="display:flex;gap:12px;margin:8px 0 4px 0;padding:12px 16px;
                 background:#0d1117;border:1px solid #1e2535;border-radius:10px;
-                font-size:12px;color:#6b7280;align-items:center;">
+                font-size:12px;color:#6b7280;align-items:center;flex-wrap:wrap;">
         <span style="font-weight:600;color:#9ca3af;margin-right:4px;">vs. Baseline →</span>
         <span>Revenue: {delta_arrow(rev_delta, "positive")}</span>
         <span style="color:#374151">|</span>
@@ -403,12 +359,12 @@ if is_scenario:
         <span style="color:#374151">|</span>
         <span>Cash: {delta_arrow(cash_delta, "positive")}</span>
         <span style="color:#374151">|</span>
-        <span>Runway: {delta_arrow(runway_delta, "positive")} mo</span>
+        <span>Runway: {delta_arrow(runway_delta, "positive")} yrs</span>
     </div>
     """, unsafe_allow_html=True)
 
 # ─── Charts ─────────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">Trends Over 24 Months</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">3. Trends Over 24 Months</div>', unsafe_allow_html=True)
 
 month_labels = [f"M{m}" for m in base_df["month"]]
 
@@ -462,17 +418,17 @@ st.plotly_chart(fig, use_container_width=True)
 # Row 3: Runway + Revenue vs Burn
 c3, c4 = st.columns(2)
 with c3:
-    runway_vals = scenario_df["runway_months"].clip(lower=0)
-    bar_colors = ["#34d399" if v > 12 else ("#fbbf24" if v > 6 else "#f87171") for v in runway_vals]
+    runway_vals = scenario_df["runway_years"].clip(lower=0)
+    bar_colors  = ["#34d399" if v >= 1.5 else ("#fbbf24" if v >= 0.5 else "#f87171") for v in runway_vals]
     fig = go.Figure()
     fig.add_trace(go.Bar(x=month_labels, y=runway_vals, name="Runway",
-        marker_color=bar_colors, hovertemplate="Runway: %{y:.1f} months<extra></extra>"))
-    fig.add_hline(y=6, line_dash="dot", line_color="#fbbf24", line_width=1,
+        marker_color=bar_colors, hovertemplate="Runway: %{y:.1f} years<extra></extra>"))
+    fig.add_hline(y=0.5, line_dash="dot", line_color="#fbbf24", line_width=1,
                   annotation_text="6 mo", annotation_font=dict(color="#fbbf24", size=10))
-    fig.add_hline(y=12, line_dash="dot", line_color="#34d399", line_width=1,
-                  annotation_text="12 mo", annotation_font=dict(color="#34d399", size=10))
-    fig.update_layout(**PLOTLY_LAYOUT, title="Runway (Months Remaining)", height=270,
-                      yaxis_title="Months", showlegend=False)
+    fig.add_hline(y=1.5, line_dash="dot", line_color="#34d399", line_width=1,
+                  annotation_text="18 mo", annotation_font=dict(color="#34d399", size=10))
+    fig.update_layout(**PLOTLY_LAYOUT, title="Runway (Years Remaining)", height=270,
+                      yaxis_title="Years", showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
 with c4:
@@ -483,7 +439,7 @@ with c4:
     fig.add_trace(go.Bar(x=month_labels, y=scenario_df["burn"], name="Burn",
         marker_color=COLORS["burn"], opacity=0.85,
         hovertemplate="Burn: $%{y:,.0f}<extra></extra>"))
-    # Annotate the first month revenue exceeds burn (default profitability)
+    # Mark first month revenue exceeds burn
     crossover = scenario_df[scenario_df["revenue"] >= scenario_df["burn"]]
     if not crossover.empty:
         cx = int(crossover.iloc[0]["month"]) - 1
@@ -500,13 +456,12 @@ with c4:
 # ─── Raw Data ────────────────────────────────────────────────────────────────────
 with st.expander("🗂️  View underlying data"):
     display_df = scenario_df[["month","revenue","burn","net_burn","cash_on_hand",
-                               "runway_months","headcount","funding_event"]].copy()
-    display_df.columns = ["Month","Revenue","Burn","Net Burn","Cash on Hand",
-                          "Runway (mo)","Headcount","Funding Event"]
+                               "runway_years","funding_event"]].copy()
+    display_df.columns = ["Month","Revenue","Burn","Net Burn","Cash on Hand","Runway (yrs)","Funding Event"]
     st.dataframe(
         display_df.style.format({
             "Revenue":"${:,.0f}", "Burn":"${:,.0f}", "Net Burn":"${:,.0f}",
-            "Cash on Hand":"${:,.0f}", "Funding Event":"${:,.0f}", "Runway (mo)":"{:.1f}",
+            "Cash on Hand":"${:,.0f}", "Funding Event":"${:,.0f}", "Runway (yrs)":"{:.1f}",
         }),
         use_container_width=True, hide_index=True,
     )

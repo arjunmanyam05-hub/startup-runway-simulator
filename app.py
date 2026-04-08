@@ -7,6 +7,7 @@ Built with: Python · Streamlit · Plotly · pandas
 
 import re
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 from data import generate_startup_data, generate_custom_data, apply_scenario
 
@@ -82,19 +83,27 @@ st.markdown("""
     .insight-box.danger  { background: #1c0a0a; border-left-color: #ef4444; color: #fca5a5; }
     .insight-box.success { background: #052e16; border-left-color: #22c55e; color: #86efac; }
 
-    /* Quick Scenario Buttons — base style only, colors set via JS below */
-    div[data-testid="stButton"] button {
-        font-family: 'DM Sans', sans-serif !important; font-weight: 600 !important;
-        font-size: 13px !important; border-radius: 8px !important;
-        width: 100% !important; padding: 8px 12px !important;
+    /* Force ALL secondary buttons dark — overrides Streamlit Cloud light theme */
+    .stApp button[kind="secondary"],
+    .stApp button[kind="secondary"]:focus,
+    button[kind="secondary"] {
+        background-color: #1e2535 !important;
+        border: 1px solid #374151 !important;
+        color: #e8eaf0 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
         transition: all 0.15s ease !important;
     }
+    button[kind="secondary"]:hover {
+        background-color: #2d3748 !important;
+        border-color: #60a5fa !important;
+        color: #ffffff !important;
+    }
 
-    .btn-green { background: #052e16 !important; border: 1.5px solid #16a34a !important; color: #4ade80 !important; }
-    .btn-blue  { background: #0c1a2e !important; border: 1.5px solid #2563eb !important; color: #60a5fa !important; }
-    .btn-amber { background: #1c1407 !important; border: 1.5px solid #d97706 !important; color: #fbbf24 !important; }
-    .btn-red   { background: #1c0a0a !important; border: 1.5px solid #dc2626 !important; color: #f87171 !important; }
-    .btn-gray  { background: #161b27 !important; border: 1.5px solid #4b5563 !important; color: #d1d5db !important; }
+    /* Target by p tag text inside buttons for per-button colors */
+    button[kind="secondary"] p { font-weight: 600 !important; }
 
     #MainMenu, footer, header { visibility: hidden; }
     [data-testid="stSidebar"] { display: none; }
@@ -103,36 +112,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── JS: Color scenario buttons reliably (works on Streamlit Cloud) ─────────────
-st.markdown("""
+# ─── JS: Color scenario buttons by label (runs after every Streamlit render) ────
+components.html("""
 <script>
-function styleScenarioButtons() {
-    const btns = window.parent.document.querySelectorAll('button[kind="secondary"]');
-    const styles = [
-        {bg:'#052e16', border:'#16a34a', color:'#4ade80'},  // Strong Growth
-        {bg:'#0c1a2e', border:'#2563eb', color:'#60a5fa'},  // Efficient Mode
-        {bg:'#1c1407', border:'#d97706', color:'#fbbf24'},  // Slowdown
-        {bg:'#1c0a0a', border:'#dc2626', color:'#f87171'},  // Crisis
-        {bg:'#161b27', border:'#4b5563', color:'#d1d5db'},  // Reset
-    ];
-    let scenarioIdx = 0;
-    btns.forEach(btn => {
-        const label = btn.innerText.trim();
-        if (['🚀 Strong Growth','✂️ Efficient Mode','📉 Slowdown','⚠️ Crisis','↺ Reset'].includes(label)) {
-            const s = styles[scenarioIdx % styles.length];
-            btn.style.setProperty('background', s.bg, 'important');
-            btn.style.setProperty('border', '1.5px solid ' + s.border, 'important');
-            btn.style.setProperty('color', s.color, 'important');
-            scenarioIdx++;
-        }
-    });
+function colorButtons() {
+    const map = {
+        '🚀 Strong Growth': {bg:'#052e16', border:'#16a34a', color:'#4ade80'},
+        '✂️ Efficient Mode': {bg:'#0c1a2e', border:'#2563eb', color:'#60a5fa'},
+        '📉 Slowdown':       {bg:'#1c1407', border:'#d97706', color:'#fbbf24'},
+        '⚠️ Crisis':         {bg:'#1c0a0a', border:'#dc2626', color:'#f87171'},
+        '↺ Reset':           {bg:'#1a1f2e', border:'#4b5563', color:'#9ca3af'},
+    };
+    function apply() {
+        const buttons = parent.document.querySelectorAll('button[kind="secondary"]');
+        buttons.forEach(btn => {
+            const label = btn.innerText.trim();
+            if (map[label]) {
+                const s = map[label];
+                btn.style.cssText += `;background:${s.bg}!important;border:1.5px solid ${s.border}!important;color:${s.color}!important`;
+            }
+        });
+    }
+    apply();
+    new MutationObserver(apply).observe(parent.document.body, {childList:true, subtree:true});
 }
-// Run on load and after any Streamlit rerenders
-const observer = new MutationObserver(styleScenarioButtons);
-observer.observe(window.parent.document.body, {childList: true, subtree: true});
-styleScenarioButtons();
+colorButtons();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 COLORS = {
     "revenue": "#34d399", "burn": "#f87171", "cash": "#60a5fa",
     "baseline": "#374151", "bg": "#0f1117", "card_bg": "#161b27",
